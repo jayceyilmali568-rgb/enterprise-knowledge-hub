@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>智汇中枢 - AI企业内部资料管理系统</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="app">
+    <!-- 侧边栏 -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="logo">
+          <span class="logo-icon">🧠</span>
+          <div class="logo-text">
+            <span class="logo-title">智汇中枢</span>
+            <span class="logo-sub">Enterprise Knowledge Hub</span>
+          </div>
+        </div>
+      </div>
+      <nav class="sidebar-nav">
+        <a class="nav-item active" data-page="dashboard" onclick="App.navigate('dashboard')">
+          <span class="nav-icon">📊</span><span>总览仪表盘</span>
+        </a>
+        <a class="nav-item" data-page="documents" onclick="App.navigate('documents')">
+          <span class="nav-icon">📁</span><span>文档中心</span>
+          <span class="nav-badge" id="doc-badge">0</span>
+        </a>
+        <a class="nav-item" data-page="assistant" onclick="App.navigate('assistant')">
+          <span class="nav-icon">🤖</span><span>AI知识助手</span>
+        </a>
+        <a class="nav-item" data-page="schedule" onclick="App.navigate('schedule')">
+          <span class="nav-icon">📅</span><span>核心日程</span>
+          <span class="nav-badge urgent" id="sch-badge">0</span>
+        </a>
+        <a class="nav-item" data-page="departments" onclick="App.navigate('departments')">
+          <span class="nav-icon">🏢</span><span>部门中枢</span>
+        </a>
+        <a class="nav-item" data-page="graph" onclick="App.navigate('graph')">
+          <span class="nav-icon">🕸️</span><span>知识图谱</span>
+        </a>
+        <a class="nav-item" data-page="search" onclick="App.navigate('search')">
+          <span class="nav-icon">🔍</span><span>全局搜索</span>
+        </a>
+      </nav>
+      <div class="sidebar-footer">
+        <div class="ai-status">
+          <span class="status-dot active"></span>
+          <span>AI引擎运行中 · 云端版（数据存于本浏览器）</span>
+        </div>
+        <div style="display:flex;gap:6px;margin-top:8px;">
+          <button class="btn btn-secondary" style="flex:1;font-size:11px;padding:5px 0;" onclick="CloudData.exportData()">导出数据</button>
+          <button class="btn btn-secondary" style="flex:1;font-size:11px;padding:5px 0;" onclick="CloudData.importData()">导入数据</button>
+          <button class="btn btn-secondary" style="flex:1;font-size:11px;padding:5px 0;" onclick="CloudData.resetData()">重置</button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- 主内容区 -->
+    <main class="main-content">
+      <!-- 顶部栏 -->
+      <header class="topbar">
+        <div class="topbar-left">
+          <button class="menu-toggle" onclick="App.toggleSidebar()">☰</button>
+          <h1 class="page-title" id="page-title">总览仪表盘</h1>
+        </div>
+        <div class="topbar-right">
+          <div class="quick-search" onclick="App.navigate('search')">
+            <span>🔍</span>
+            <input type="text" placeholder="搜索文档、日程、部门..." id="global-search-input" onkeyup="App.handleGlobalSearch(event)">
+          </div>
+          <div class="user-info">
+            <div class="user-avatar">管</div>
+            <span class="user-name">系统管理员</span>
+          </div>
+        </div>
+      </header>
+
+      <!-- 页面内容容器 -->
+      <div class="page-container" id="page-container">
+        <!-- 各页面通过JS动态渲染 -->
+      </div>
+    </main>
+  </div>
+
+  <!-- 文档上传弹窗 -->
+  <div class="modal-overlay" id="upload-modal" style="display:none;">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>上传企业资料</h2>
+        <button class="modal-close" onclick="App.closeModal('upload-modal')">✕</button>
+      </div>
+      <div class="modal-body">
+        <!-- 上传方式切换 -->
+        <div class="upload-tabs">
+          <button class="upload-tab active" onclick="App.switchUploadTab('file')">文件上传</button>
+          <button class="upload-tab" onclick="App.switchUploadTab('text')">文本输入</button>
+        </div>
+
+        <!-- 文件上传 -->
+        <div id="file-upload-panel" class="upload-panel active">
+          <div class="drop-zone" id="drop-zone" ondragover="App.handleDragOver(event)" ondrop="App.handleDrop(event)" ondragleave="App.handleDragLeave(event)">
+            <div class="drop-zone-content">
+              <span class="drop-icon">📎</span>
+              <p>将文件拖拽到此处，或<span class="upload-link" onclick="document.getElementById('file-input').click()">点击选择文件</span></p>
+              <p class="drop-hint">支持 txt, md, pdf, doc, docx, xlsx, pptx 等格式，单个文件最大50MB</p>
+              <input type="file" id="file-input" multiple style="display:none;" onchange="App.handleFileSelect(event)">
+            </div>
+          </div>
+          <div class="selected-files" id="selected-files"></div>
+        </div>
+
+        <!-- 文本输入 -->
+        <div id="text-upload-panel" class="upload-panel">
+          <input type="text" class="text-input" id="text-title" placeholder="文档标题" style="margin-bottom:12px;">
+          <textarea class="text-input textarea" id="text-content" placeholder="在此输入或粘贴文档内容... AI将自动进行分类、关键词提取和摘要生成"></textarea>
+        </div>
+
+        <!-- 通用选项 -->
+        <div class="upload-options">
+          <div class="option-group">
+            <label>归属部门</label>
+            <select id="upload-department" class="option-select"></select>
+          </div>
+          <div class="option-group">
+            <label>访问级别</label>
+            <select id="upload-access" class="option-select">
+              <option value="public">全员可见</option>
+              <option value="department" selected>部门内可见</option>
+              <option value="restricted">受限访问</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="App.closeModal('upload-modal')">取消</button>
+        <button class="btn btn-primary" onclick="App.submitUpload()">上传并AI处理</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- AI处理进度弹窗 -->
+  <div class="modal-overlay" id="processing-modal" style="display:none;">
+    <div class="modal modal-sm">
+      <div class="modal-body">
+        <div class="processing-animation">
+          <div class="processing-ring"></div>
+          <div class="processing-ring2"></div>
+          <span class="processing-icon">🧠</span>
+        </div>
+        <h3 class="processing-title">AI正在处理文档</h3>
+        <p class="processing-desc" id="processing-step">正在提取文本内容...</p>
+        <div class="processing-steps" id="processing-steps"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 文档详情弹窗 -->
+  <div class="modal-overlay" id="doc-detail-modal" style="display:none;">
+    <div class="modal modal-lg">
+      <div class="modal-header">
+        <h2 id="doc-detail-title">文档详情</h2>
+        <button class="modal-close" onclick="App.closeModal('doc-detail-modal')">✕</button>
+      </div>
+      <div class="modal-body" id="doc-detail-body"></div>
+    </div>
+  </div>
+
+  <!-- 日程添加弹窗 -->
+  <div class="modal-overlay" id="schedule-modal" style="display:none;">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>新建日程</h2>
+        <button class="modal-close" onclick="App.closeModal('schedule-modal')">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>日程标题</label>
+          <input type="text" id="sch-title" placeholder="如：Q4战略规划会议">
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>日期</label>
+            <input type="date" id="sch-date">
+          </div>
+          <div class="form-group">
+            <label>时间</label>
+            <input type="text" id="sch-time" placeholder="如：14:00-16:00">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>归属部门</label>
+            <select id="sch-department" class="option-select"></select>
+          </div>
+          <div class="form-group">
+            <label>优先级</label>
+            <select id="sch-priority" class="option-select">
+              <option value="critical">关键</option>
+              <option value="high" selected>重要</option>
+              <option value="medium">一般</option>
+              <option value="low">常规</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>类型</label>
+            <select id="sch-type" class="option-select">
+              <option value="meeting">会议</option>
+              <option value="deadline">截止</option>
+              <option value="event">活动</option>
+              <option value="review">评审</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>地点</label>
+            <input type="text" id="sch-location" placeholder="如：总部A栋3楼会议室">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>描述</label>
+          <textarea id="sch-description" placeholder="日程详情描述..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="App.closeModal('schedule-modal')">取消</button>
+        <button class="btn btn-primary" onclick="App.submitSchedule()">创建日程</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast通知 -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <script src="js/ai-engine.js"></script>
+  <script src="js/local-server.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    // 云端版数据管理工具（导出/导入/重置）
+    const CloudData = {
+      exportData() {
+        const blob = new Blob([LocalAPI.exportData()], { type: 'application/json' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = '智汇中枢-数据备份-' + new Date().toISOString().split('T')[0] + '.json';
+        a.click();
+        URL.revokeObjectURL(a.href);
+        App.showToast('数据已导出为 JSON 备份文件', 'success');
+      },
+      importData() {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.json';
+        input.onchange = async (e) => {
+          const file = e.target.files[0];
+          if (!file) return;
+          try {
+            LocalAPI.importData(await file.text());
+            App.showToast('数据导入成功，正在刷新...', 'success');
+            setTimeout(() => location.reload(), 800);
+          } catch (err) {
+            App.showToast('导入失败：文件格式不正确', 'error');
+          }
+        };
+        input.click();
+      },
+      resetData() {
+        if (confirm('确定要重置所有数据吗？将恢复为初始示例数据，当前上传的文档与日程会被清除。')) {
+          LocalAPI.resetData();
+          App.showToast('数据已重置', 'success');
+          setTimeout(() => location.reload(), 600);
+        }
+      }
+    };
+  </script>
+</body>
+</html>
