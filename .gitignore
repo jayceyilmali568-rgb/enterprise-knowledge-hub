@@ -1,0 +1,13 @@
+# dependencies
+node_modules/
+
+# runtime data (never commit)
+data/
+
+# logs / os
+*.log
+.DS_Store
+
+# local extras
+screenshots/
+test-cloud.js
